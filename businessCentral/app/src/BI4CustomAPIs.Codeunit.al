@@ -1,21 +1,20 @@
 codeunit 82579 BI4CustomAPIs
 {
     var
-        ContainerUrlTxt: Label 'https://%1.blob.core.windows.net/%2', Comment = '%1: Account name, %2: Container Name';
         ADLSECredentials: Codeunit "ADLSE Credentials";
+        ContainerUrlTxt: Label 'https://%1.blob.core.windows.net/%2', Comment = '%1: Account name, %2: Container Name';
 
     [ServiceEnabled]
     procedure AddTableForExport(TableID: Integer): Text
     var
         adlsTable: Record "ADLSE Table";
-        tempMultiCompStatus: Boolean;
     begin
-        tempMultiCompStatus := GetMultiCompanyExportStatus();
-        if tempMultiCompStatus then
-            MultiCompanyExportChange(false);
+        // tempMultiCompStatus := GetMultiCompanyExportStatus();
+        // if tempMultiCompStatus then
+        //     MultiCompanyExportChange(false);
         adlsTable.Add(TableID);
-        if tempMultiCompStatus then
-            MultiCompanyExportChange(true);
+        // if tempMultiCompStatus then
+        //     MultiCompanyExportChange(true);
         exit('Table added')
     end;
 
@@ -29,7 +28,6 @@ codeunit 82579 BI4CustomAPIs
         listOfTables: List of [Integer];
         txt: Text;
         tableInteger: Integer;
-        tempMultiCompStatus: Boolean;
     begin
         textSplit := Tables.Split(',');
 
@@ -38,23 +36,22 @@ codeunit 82579 BI4CustomAPIs
             listOfTables.Add(tableInteger);
         end;
 
-        tempMultiCompStatus := GetMultiCompanyExportStatus();
+        // tempMultiCompStatus := GetMultiCompanyExportStatus();
 
-        if tempMultiCompStatus then
-            MultiCompanyExportChange(false);
+        // if tempMultiCompStatus then
+        //     MultiCompanyExportChange(false);
 
-        foreach tableID in listOfTables do begin
+        foreach tableID in listOfTables do
             if not CheckIfTablesExits(tableID) then
-                adlsTable.Add(TableID)
-        end;
-        if tempMultiCompStatus then
-            MultiCompanyExportChange(true);
-        if StrLen(output) = 0 then begin
-            exit('All tables added');
-        end
-        else begin
+                adlsTable.Add(TableID);
+
+        // if tempMultiCompStatus then
+        //     MultiCompanyExportChange(true);
+
+        if StrLen(output) = 0 then
+            exit('All tables added')
+        else
             exit(output);
-        end;
     end;
 
     procedure CheckIfTablesExits(TableID: Integer): Boolean
@@ -62,7 +59,7 @@ codeunit 82579 BI4CustomAPIs
         adlsTable: Record "ADLSE Table";
     begin
         adlsTable.SetRange("Table ID", TableID);
-        exit(adlsTable.FindFirst());
+        exit(not adlsTable.IsEmpty());
     end;
 
     [ServiceEnabled]
@@ -91,7 +88,8 @@ codeunit 82579 BI4CustomAPIs
                     adlsField.DeleteAll();
                 adlsField.Reset();
             end;
-            foreach fieldNo in listOfFields do begin
+
+            foreach fieldNo in listOfFields do
                 if ResetAllFields = false then begin
                     adlsField.SetRange("Table ID", adlsTable."Table ID");
                     adlsField.SetRange("Field ID", fieldNo);
@@ -108,12 +106,11 @@ codeunit 82579 BI4CustomAPIs
                     adlsField.Enabled := true;
                     adlsField.Insert();
                 end;
-            end;
+
             exit('Fields were inserted');
         end
-        else begin
+        else
             exit('Cannot find a table')
-        end;
     end;
 
     [ServiceEnabled]
@@ -122,12 +119,13 @@ codeunit 82579 BI4CustomAPIs
         adlsTable: Record "ADLSE Table";
         exportedTables: Text;
     begin
-        if adlsTable.FindSet(true) then begin
+        if adlsTable.FindSet(true) then
             repeat
                 exportedTables += Format(adlsTable."Table ID") + ',';
             until adlsTable.Next() = 0;
-        end;
+
         exportedTables := CopyStr(exportedTables, 1, StrLen(exportedTables) - 1);
+
         exit(exportedTables);
     end;
 
@@ -140,19 +138,17 @@ codeunit 82579 BI4CustomAPIs
         adlsTable.SetRange("Table ID", TableID);
         if adlsTable.FindSet(true) then begin
             adlsField.SetRange("Table ID", adlsTable."Table ID");
-            if adlsField.FindSet() then begin
+            if adlsField.FindSet() then
                 repeat
                     adlsField.Enabled := true;
                     adlsField.Modify();
                 until adlsField.Next() = 0;
-            end;
             adlsTable.Enabled := true;
             adlsTable.Modify();
             exit('Table: ' + Format(TableID) + ' was enabled');
         end
-        else begin
+        else
             exit('Cannot find a table')
-        end;
     end;
 
     [ServiceEnabled]
@@ -164,19 +160,19 @@ codeunit 82579 BI4CustomAPIs
         adlsTable.SetRange("Table ID", TableID);
         if adlsTable.FindSet(true) then begin
             adlsField.SetRange("Table ID", adlsTable."Table ID");
-            if adlsField.FindSet() then begin
+            if adlsField.FindSet() then
                 repeat
                     adlsField.Enabled := false;
                     adlsField.Modify();
                 until adlsField.Next() = 0;
-            end;
+
             adlsTable.Enabled := false;
             adlsTable.Modify();
+
             exit('Table: ' + Format(TableID) + ' was disabled');
         end
-        else begin
+        else
             exit('Cannot find a table');
-        end;
     end;
 
     [ServiceEnabled]
@@ -194,9 +190,8 @@ codeunit 82579 BI4CustomAPIs
             until adlsTable.Next() = 0;
             exit(output.ToText());
         end
-        else begin
+        else
             exit('There are no exported tables');
-        end;
     end;
 
     [ServiceEnabled]
@@ -223,30 +218,30 @@ codeunit 82579 BI4CustomAPIs
         listOfIds: List of [Integer];
     begin
         fieldRec.SetRange("TableNo", TableId);
-        if fieldRec.FindSet() then begin
+        if fieldRec.FindSet() then
             repeat
                 listOfIds.Add(fieldRec."No.");
             until fieldRec.Next() = 0;
-        end;
+
         exit(listOfIds);
     end;
 
-    [ServiceEnabled]
-    procedure MultiCompanyExportChange(AllowExport: Boolean)
-    var
-        adlsSetup: Record "ADLSE Setup";
-    begin
-        adlsSetup."Multi- Company Export" := AllowExport;
-    end;
+    // [ServiceEnabled]
+    // procedure MultiCompanyExportChange(AllowExport: Boolean)
+    // var
+    //     adlsSetup: Record "ADLSE Setup";
+    // begin
+    //     adlsSetup."Multi- Company Export" := AllowExport;
+    // end;
 
-    [ServiceEnabled]
-    procedure GetMultiCompanyExportStatus(): Boolean
-    var
-        adlsSetup: Record "ADLSE Setup";
-    begin
-        adlsSetup.FindFirst();
-        exit(adlsSetup."Multi- Company Export");
-    end;
+    // [ServiceEnabled]
+    // procedure GetMultiCompanyExportStatus(): Boolean
+    // var
+    //     adlsSetup: Record "ADLSE Setup";
+    // begin
+    //     adlsSetup.FindFirst();
+    //     exit(adlsSetup."Multi- Company Export");
+    // end;
 
     //METADATA
     [ServiceEnabled]
@@ -282,8 +277,8 @@ codeunit 82579 BI4CustomAPIs
         exit(StrSubstNo(ContainerUrlTxt, accountName, DefaultContainerName));
     end;
 
-    LOCAL PROCEDURE GetBI4Tables(): Text //Gets entire xml
-    VAR
+    local procedure GetBI4Tables(): Text //Gets entire xml
+    var
         BI4TablesXml: XmlElement;
         XmlDoc: XmlDocument;
         Out: Text;
@@ -296,17 +291,18 @@ codeunit 82579 BI4CustomAPIs
         exit(Out);
     END;
 
-    LOCAL PROCEDURE GetBI4TablesXml(): XmlElement //Gets all XmlElements and creates Bi4Dynamics XmlElement
-    VAR
-        xmlTables: XmlElement;
-        xmlTable: XmlElement;
+    local procedure GetBI4TablesXml(): XmlElement //Gets all XmlElements and creates Bi4Dynamics XmlElement
+    var
         metadataTable: Record AllObjWithCaption; //Saves AllObjWithCaption as metadataTable
         recRef: RecordRef;
+        xmlTables: XmlElement;
+        xmlTable: XmlElement;
     begin
         xmlTables := XmlElement.Create('Bi4Dynamics');
         metadataTable.SetRange("Object ID", 0, 2000000000);
         metadataTable.SetRange("Object Type", metadataTable."Object Type"::"Table");
-        if metadataTable.FindSet(true) then begin
+
+        if metadataTable.FindSet(true) then
             repeat
                 recRef.Open(metadataTable."Object ID", true);
                 xmlTable := MetaTableXml(recRef, metadataTable); //Gets MetaTable XmlElement
@@ -315,17 +311,17 @@ codeunit 82579 BI4CustomAPIs
                 xmlTables.Add(xmlTable); //Writes MetaTable to Bi4Dynamics
                 recRef.Close();
             until metadataTable.Next() = 0;
-        end;
+
         exit(xmlTables);
     end;
 
-    LOCAL PROCEDURE MetaTableXml(recRef: RecordRef; metadataTable: Record "AllObjWithCaption"): XmlElement //Creates and writes to MetaTable XmlElement
-    VAR
+    local procedure MetaTableXml(recRef: RecordRef; metadataTable: Record "AllObjWithCaption"): XmlElement //Creates and writes to MetaTable XmlElement
+    var
         xmlTable: XmlElement;
         idNavApp: Text;
         nameNavApp: Text;
         captionml: Text;
-    BEGIN
+    begin
         xmlTable := XmlElement.Create('MetaTable');
         idNavApp := GetNavDataId(Format(metadataTable."App Package ID"));
         nameNavApp := GetNavDataName(metadataTable."App Package ID");
@@ -341,23 +337,21 @@ codeunit 82579 BI4CustomAPIs
         xmlTable.SetAttribute('Object_Type', Format(metadataTable."Object Type"));
         xmlTable.SetAttribute('CaptionML', captionml);
         xmlTable.SetAttribute('SystemId', metadataTable.SystemId);
-        EXIT(xmlTable);
-    END;
 
-    LOCAL PROCEDURE FieldsXml(TableNumber: Integer; appID: Text): XmlElement //Creates and writes to Fields XmlElement
-    VAR
+        exit(xmlTable);
+    end;
+
+    local procedure FieldsXml(TableNumber: Integer; appID: Text): XmlElement //Creates and writes to Fields XmlElement
+    var
+        RelationTable: Record "Table Relations Metadata";
+        field: Record Field;
         xmlFields: XmlElement;
         xmlField: XmlElement;
         xmlRelation: XmlElement;
         xmlConditions: XmlElement;
-        field: Record Field;
-        x: Integer;
         idNavApp: Text;
-        recRef: RecordRef;
-        RelationTable: Record "Table Relations Metadata";
         hasRelation: Boolean;
-        hasFieldRelation: Boolean;
-    BEGIN
+    begin
         xmlFields := XmlElement.Create('Fields');
         idNavApp := GetNavDataId(appID);
         field.SetRange(TableNo, TableNumber);
@@ -366,8 +360,9 @@ codeunit 82579 BI4CustomAPIs
         field.SetFilter(field.Type, '<>%1 & <>%2', field.Type::GUID, field.Type::BLOB);
         RelationTable.SetRange("Table ID", TableNumber);
         hasRelation := RelationTable.FindSet(true);
-        IF field.FINDSET(true) THEN BEGIN
-            REPEAT
+
+        if field.FindSet(true) then
+            repeat
                 xmlField := XmlElement.Create('Field');
                 xmlField.SetAttribute('Name', field.FieldName);
                 xmlField.SetAttribute('ID', Format(field."No."));
@@ -389,9 +384,10 @@ codeunit 82579 BI4CustomAPIs
                 xmlField.SetAttribute('Type_Name', field."Type Name");
                 xmlField.SetAttribute('SourceAppId', GetNavDataId(field."App Package ID"));
                 xmlField.SetAttribute('IsPartOfPrimaryKey', Format(field.IsPartOfPrimaryKey));
+
                 if hasRelation then begin
                     RelationTable.SetRange("Field No.", field."No.");
-                    if RelationTable.FindFirst() then begin
+                    if RelationTable.FindFirst() then
                         repeat
                             xmlRelation := XmlElement.Create('TableRelations');
                             xmlRelation.SetAttribute('TableID', Format(RelationTable."Related Table ID"));
@@ -406,24 +402,23 @@ codeunit 82579 BI4CustomAPIs
                             end;
                             xmlField.Add(xmlRelation);
                         until RelationTable.Next() = 0;
-                    end;
                 end;
                 xmlFields.Add(xmlField);
-            UNTIL field.NEXT = 0;
-        END;
-        EXIT(xmlFields);
-    END;
+            until field.Next() = 0;
 
-    LOCAL PROCEDURE GetKeysXml(recRef: RecordRef; appID: Text): XmlElement //Creates and writes to Keys XmlElement
-    VAR
+        exit(xmlFields);
+    end;
+
+    local procedure GetKeysXml(recRef: RecordRef; appID: Text): XmlElement //Creates and writes to Keys XmlElement
+    var
         xmlKey: XmlElement;
         xmlKeys: XmlElement;
         i: Integer;
         idNavApp: Text;
-    BEGIN
+    begin
         idNavApp := GetNavDataId(appID);
         xmlKeys := XmlElement.Create('Keys');
-        FOR i := 1 TO RecRef.KeyCount() DO BEGIN
+        for i := 1 TO RecRef.KeyCount() DO BEGIN
             xmlKey := XmlElement.Create('Key');
             xmlKey.SetAttribute('Enabled', FormatBoolean(RecRef.KEYINDEX(i).Active()));
             xmlKey.SetAttribute('Key', FORMAT(RecRef.KEYINDEX(i)));
@@ -435,11 +430,12 @@ codeunit 82579 BI4CustomAPIs
             xmlKey.SetAttribute('Clustered', '1');
             xmlKey.SetAttribute('Unique', '0');
             xmlKeys.Add(xmlKey);
-        END;
-        EXIT(xmlKeys);
-    END;
+        end;
 
-    Local procedure GetNavDataId(appID: Text): Text//Get id field from Nav App Installed App table
+        exit(xmlKeys);
+    end;
+
+    local procedure GetNavDataId(appID: Text): Text//Get id field from Nav App Installed App table
     var
         navTable: Record "NAV App Installed App";
     begin
@@ -450,7 +446,7 @@ codeunit 82579 BI4CustomAPIs
         exit('');
     end;
 
-    Local procedure GetNavDataName(appID: Guid): Text //Get name field from Nav App Installed App table
+    local procedure GetNavDataName(appID: Guid): Text //Get name field from Nav App Installed App table
     var
         navTable: Record "NAV App Installed App";
     begin
@@ -461,12 +457,12 @@ codeunit 82579 BI4CustomAPIs
         exit('');
     end;
 
-    LOCAL PROCEDURE FormatBoolean(boolValue: Boolean): Text //Returns value as 1 or 0
-    VAR
-    BEGIN
-        IF (boolValue) THEN
-            EXIT('1')
-        ELSE
-            EXIT('0')
-    END;
+    local procedure FormatBoolean(boolValue: Boolean): Text //Returns value as 1 or 0
+    var
+    begin
+        if (boolvalue) then
+            exit('1')
+        else
+            exit('0')
+    end;
 }
